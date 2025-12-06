@@ -1,9 +1,5 @@
 <?php
-// recipe_create.php — BiteBook
-ini_set('display_errors', 1); error_reporting(E_ALL);
-
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../lib/csrf.php';
 require_once __DIR__ . '/bitebook-db.php';
 
 if (!function_exists('e')) { function e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); } }
@@ -13,13 +9,9 @@ function param_int_or_null($k){
   return is_numeric($_POST[$k]) ? (int)$_POST[$k] : false;
 }
 
-csrf_token();
-
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  csrf_verify();
-
   $title       = param_str('title');
   $description = param_str('description');
   $difficulty  = param_str('difficulty','');
@@ -354,8 +346,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
 
       <form method="post" action="recipe_create.php" novalidate>
-        <?php csrf_field(); ?>
-
         <div class="form-group">
           <label>Recipe Title *</label>
           <input type="text" name="title" required value="<?php echo e($_POST['title'] ?? ''); ?>" placeholder="e.g., Grandmother's Apple Pie">
@@ -387,7 +377,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div class="form-group">
-          <label>User ID * <span class="label-hint">(demo mode)</span></label>
+          <label>User ID * </label>
           <input type="number" name="user_id" min="1" required value="<?php echo e($_POST['user_id'] ?? ''); ?>" placeholder="1">
         </div>
 

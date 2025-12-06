@@ -1,5 +1,4 @@
 <?php
-ini_set('display_errors', 1); error_reporting(E_ALL);
 session_start();
 
 require_once __DIR__ . '/../config.php';
@@ -62,7 +61,6 @@ $recipes = bb_get_recipes_by_user($user_id, $search);
       z-index: 1;
     }
 
-    /* Top navigation bar with folder tabs aesthetic */
     .top-nav {
       display: flex;
       justify-content: space-between;
@@ -137,7 +135,6 @@ $recipes = bb_get_recipes_by_user($user_id, $search);
       font-family: 'Georgia', serif;
     }
 
-    /* Search and filter section */
     .search-section {
       background: #fffcf7;
       padding: 2rem;
@@ -517,7 +514,8 @@ $recipes = bb_get_recipes_by_user($user_id, $search);
                     <?php echo number_format((float)$r['avg_rating'], 1); ?> ★
                   </div>
                   <div class="rating-count">
-                    <?php echo (int)$r['rating_count']; ?> <?php echo $r['rating_count'] == 1 ? 'rating' : 'ratings'; ?>
+                    <?php echo (int)$r['rating_count']; ?> 
+                    <?php echo $r['rating_count'] == 1 ? 'rating' : 'ratings'; ?>
                   </div>
                 <?php else: ?>
                   <div class="rating-stars" style="color: #c8bfb3;">—</div>
@@ -528,6 +526,23 @@ $recipes = bb_get_recipes_by_user($user_id, $search);
             <p style="margin-bottom: 1rem;">
               <?php echo e($r['description'] ?? ''); ?>
             </p>
+            <div style="margin-bottom: 1rem; display:flex; gap:0.5rem;">
+              <a 
+                href="recipe_edit.php?id=<?php echo (int)$r['recipe_id']; ?>" 
+                class="btn-primary" 
+                style="background:#4a6fa5; padding:0.5rem 1rem; font-size:0.9rem;"
+              >
+                Edit
+              </a>
+              <a 
+                href="recipe_delete.php?id=<?php echo (int)$r['recipe_id']; ?>" 
+                class="btn-primary" 
+                style="background:#a33; padding:0.5rem 1rem; font-size:0.9rem;"
+                onclick="return confirm('Are you sure you want to permanently delete this recipe?');"
+              >
+                Delete
+              </a>
+            </div>
             <div class="recipe-meta">
               <div class="meta-item">
                 <span><?php echo (int)$r['servings']; ?> servings</span>

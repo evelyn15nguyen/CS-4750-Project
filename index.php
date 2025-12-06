@@ -1,5 +1,4 @@
 <?php
-ini_set('display_errors', 1); error_reporting(E_ALL);
 session_start();
 
 require_once __DIR__ . '/../config.php';
@@ -56,7 +55,6 @@ $user_id = $_SESSION['user_id'] ?? null;
       z-index: 1;
     }
 
-    /* Top navigation bar with folder tabs aesthetic */
     .top-nav {
       display: flex;
       justify-content: space-between;
@@ -124,7 +122,6 @@ $user_id = $_SESSION['user_id'] ?? null;
       font-family: 'Georgia', serif;
     }
 
-    /* Search and filter section with folder-inspired design */
     .search-section {
       background: #fffcf7;
       padding: 2rem;
@@ -244,7 +241,6 @@ $user_id = $_SESSION['user_id'] ?? null;
       gap: 2rem;
     }
 
-    /* Recipe cards with file/folder aesthetic */
     .recipe-card {
       background: #fffcf7;
       border-radius: 0.75rem;
