@@ -16,11 +16,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Please enter both email and password.';
     } else {
         try {
-            $stmt = $db->prepare("SELECT user_id, name, password FROM Users WHERE email = :email");
+            $stmt = $db->prepare("SELECT user_id, name, password_hash FROM Users WHERE email = :email");
             $stmt->execute([':email' => $email]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($user && $password === $user['password']) {
+            if ($user && password_verify($password, $user['password_hash'])) {
                 $_SESSION['user_id'] = (int)$user['user_id'];
                 $_SESSION['username'] = $user['name'];
 

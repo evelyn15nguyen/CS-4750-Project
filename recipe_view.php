@@ -1,5 +1,9 @@
 <?php
+// recipe_view.php — BiteBook
+ini_set('display_errors',1); error_reporting(E_ALL);
+
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../lib/csrf.php';
 require_once __DIR__ . '/bitebook-db.php';
 
 if (!function_exists('e')) { function e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); } }
@@ -7,7 +11,12 @@ if (!function_exists('e')) { function e($s){ return htmlspecialchars((string)$s,
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if ($id <= 0) { http_response_code(400); exit('Missing id'); }
 
+// seed token for the page
+csrf_token();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  csrf_verify();
+
   if (isset($_POST['add_comment'])) {
     bb_add_comment($id, (int)$_POST['c_user'], trim($_POST['c_body'] ?? ''));
   } elseif (isset($_POST['add_rating'])) {
@@ -453,6 +462,7 @@ $rating      = bb_rating_summary($id);
 
       <div class="form-card">
         <form method="post">
+          <?php csrf_field(); ?>
           <div class="form-group">
             <label>User ID</label>
             <input type="number" name="r_user" min="1" required placeholder="Enter your user ID">
@@ -482,6 +492,7 @@ $rating      = bb_rating_summary($id);
       
       <div class="form-card" style="margin-bottom: 2rem;">
         <form method="post">
+          <?php csrf_field(); ?>
           <div class="form-group">
             <label>User ID</label>
             <input type="number" name="c_user" min="1" required placeholder="Enter your user ID">
