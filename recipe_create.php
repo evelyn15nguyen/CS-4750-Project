@@ -1,18 +1,6 @@
 <?php
-// recipe_create.php — BiteBook (secured, SP-based)
-session_start();
-
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../lib/csrf.php';
 require_once __DIR__ . '/bitebook-db.php';
-
-if (!isset($_SESSION['user_id'])) {
-  header('Location: login.php');
-  exit;
-}
 
 if (!function_exists('e')) { function e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); } }
 function param_str($k,$d=''){ return isset($_POST[$k]) ? trim((string)$_POST[$k]) : $d; }
@@ -21,22 +9,20 @@ function param_int_or_null($k){
   return is_numeric($_POST[$k]) ? (int)$_POST[$k] : false;
 }
 
-csrf_token();
-
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  csrf_verify();
-
-  $user_id     = (int)$_SESSION['user_id'];
   $title       = param_str('title');
   $description = param_str('description');
   $difficulty  = param_str('difficulty','');
   $prep_time   = param_int_or_null('prep_time');
   $cook_time   = param_int_or_null('cook_time');
   $servings    = param_int_or_null('servings');
+  $user_id     = param_int_or_null('user_id');
 
   if ($title === '')        $errors[] = 'Title is required.';
+  if ($user_id === null)    $errors[] = 'User ID is required.';
+  if ($user_id === false)   $errors[] = 'User ID must be numeric.';
   if ($servings === null)   $errors[] = 'Servings is required.';
   if ($servings === false)  $errors[] = 'Servings must be numeric.';
   if ($prep_time === false) $errors[] = 'Prep time must be numeric if provided.';
@@ -63,34 +49,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   if (!$errors) {
     try {
-      $stmt = $db->prepare("CALL sp_recipe_create(?,?,?,?,?,?,?, @rid)");
-      $stmt->execute([
-        $user_id, $title, $description, ($difficulty ?: null),
-        $prep_time, $cook_time, (int)$servings
-      ]);
-      $rid = (int)$db->query("SELECT @rid")->fetchColumn();
-
-      if (!empty($ingredients)) {
-        $putIng = $db->prepare("CALL sp_recipe_put_ingredient(?,?,?,?,?,?)");
-        $i = 1;
-        foreach ($ingredients as $ing) {
-          $putIng->execute([$user_id, $rid, $i++, $ing['name'], $ing['qty'], $ing['unit']]);
-        }
-      }
-
-      if (!empty($steps)) {
-        $putStep = $db->prepare("CALL sp_recipe_put_step(?,?,?,?)");
-        $s = 1;
-        foreach ($steps as $txt) {
-          $putStep->execute([$user_id, $rid, $s++, $txt]);
-        }
-      }
-
+      $rid = bb_create_recipe(
+        (int)$user_id, $title, $description, $difficulty ?: null,
+        $prep_time, $cook_time, (int)$servings, $ingredients, $steps
+      );
       header('Location: recipe_view.php?id='.$rid);
       exit;
-
     } catch (Throwable $e) {
-      $errors[] = 'Failed to save: ' . $e->getMessage();
+      $errors[] = 'Failed to save: '.$e->getMessage();
     }
   }
 }
@@ -380,8 +346,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
 
       <form method="post" action="recipe_create.php" novalidate>
-        <?php csrf_field(); ?>
-
         <div class="form-group">
           <label>Recipe Title *</label>
           <input type="text" name="title" required value="<?php echo e($_POST['title'] ?? ''); ?>" placeholder="e.g., Grandmother's Apple Pie">
@@ -412,10 +376,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
         </div>
 
-        <!-- <div class="form-group">
-          <label>User ID * <span class="label-hint">(demo mode)</span></label>
+        <div class="form-group">
+          <label>User ID * </label>
           <input type="number" name="user_id" min="1" required value="<?php echo e($_POST['user_id'] ?? ''); ?>" placeholder="1">
-        </div> -->
+        </div>
 
         <div class="section-header">
           <span>🥕</span>

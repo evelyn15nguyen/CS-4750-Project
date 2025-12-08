@@ -2,12 +2,11 @@
 
 require_once __DIR__ . '/../config.php';
 
-
 //
 // ---------- Recipes ----------
 //
 
-// Create a recipe WITH ingredients & steps in a single transaction.
+// Create a recipe w/ ingredients and steps in a single transaction
 function bb_create_recipe($user_id, $title, $desc, $difficulty, $prep, $cook, $servings, $ingredients = [], $steps = []) {
   global $db;
 
@@ -45,7 +44,7 @@ function bb_create_recipe($user_id, $title, $desc, $difficulty, $prep, $cook, $s
       $recipe_id = (int)$db->lastInsertId();
     }
 
-    // Ingredients (ingredient_id is per-recipe running index 1..N)
+    // Ingredients
     if (!empty($ingredients)) {
       $insIng = $db->prepare(
         "INSERT INTO Ingredients (recipe_id, ingredient_id, name, number_quantity, unit_quantity)
@@ -61,7 +60,7 @@ function bb_create_recipe($user_id, $title, $desc, $difficulty, $prep, $cook, $s
       }
     }
 
-    // Steps (step_no 1..N)
+    // Steps
     if (!empty($steps)) {
       $insStep = $db->prepare(
         "INSERT INTO Steps (recipe_id, step_no, instruction) VALUES (?, ?, ?)"
@@ -79,11 +78,11 @@ function bb_create_recipe($user_id, $title, $desc, $difficulty, $prep, $cook, $s
 
   } catch (Throwable $e) {
     if ($db->inTransaction()) $db->rollBack();
-    throw $e; // Let caller display an error like in your POTD
+    throw $e;
   }
 }
 
-// List recent recipes (minimal fields for cards)
+// List recent recipes 
 function bb_list_recipes($limit = 50) {
   global $db;
   $sql = "SELECT recipe_id, title_recipe_info, description_recipe_info, servings
@@ -107,51 +106,6 @@ function bb_get_recipe($recipe_id) {
   $stmt->execute([$recipe_id]);
   return $stmt->fetch();
 }
-
-// List this user's recipes (with optional search), newest/highest-rated first
-function bb_get_recipes_by_user(int $user_id, string $q = ''): array {
-  global $db;
-
-  $base = "
-    SELECT
-      R.recipe_id,
-      R.user_id,
-      R.title_recipe_info       AS title,
-      R.description_recipe_info AS description,
-      R.servings,
-      COALESCE(R.created_at, NOW()) AS created_at,
-      U.name                    AS author,
-      AVG(T.stars)              AS avg_rating,
-      COUNT(T.user_id)          AS rating_count
-    FROM Recipes R
-    JOIN Users U           ON U.user_id = R.user_id
-    LEFT JOIN rates T      ON T.recipe_id = R.recipe_id
-    LEFT JOIN Ingredients I ON I.recipe_id = R.recipe_id
-    WHERE R.user_id = ?
-  ";
-
-  $params = [$user_id];
-
-  if ($q !== '') {
-    $tokens = preg_split('/\s+/', $q, -1, PREG_SPLIT_NO_EMPTY);
-    foreach ($tokens as $t) {
-      $like = '%' . $t . '%';
-      $base .= " AND (R.title_recipe_info LIKE ? OR R.description_recipe_info LIKE ? OR I.name LIKE ?)";
-      array_push($params, $like, $like, $like);
-    }
-  }
-
-  $sql = $base . "
-    GROUP BY R.recipe_id
-    ORDER BY COALESCE(AVG(T.stars),0) DESC, R.recipe_id DESC
-    LIMIT 500
-  ";
-
-  $stmt = $db->prepare($sql);
-  $stmt->execute($params);
-  return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-
 
 // Fetch all recipes
 function bb_get_all_recipes(string $q = ''): array {
@@ -230,7 +184,7 @@ function bb_get_steps($recipe_id) {
 // ---------- Comments & Ratings ----------
 //
 
-
+// Insert/update a comment
 function bb_add_comment($recipe_id, $user_id, $body) {
   global $db;
   $update = $db->prepare("UPDATE comments SET body=?, created_at=NOW()
@@ -245,7 +199,7 @@ function bb_add_comment($recipe_id, $user_id, $body) {
   }
 }
 
-// Read comments newest-first
+// Read comments
 function bb_get_comments($recipe_id) {
   global $db;
   $sql = "SELECT C.user_id, U.name, C.body, C.created_at
@@ -258,7 +212,7 @@ function bb_get_comments($recipe_id) {
   return $stmt->fetchAll();
 }
 
-// Insert/Upsert a rating (stars 1..5)
+// Insert/updating a rating
 function bb_rate_recipe($recipe_id, $user_id, $stars) {
   global $db;
   $stars = (int)$stars;
@@ -284,8 +238,10 @@ function bb_rating_summary($recipe_id) {
 }
 
 //
+// ---------- Users ----------
 //
 
+// Ensure a user exists
 function bb_upsert_user($user_id, $name) {
   global $db;
   $upd = $db->prepare("UPDATE Users SET name=? WHERE user_id=?");
@@ -295,3 +251,143 @@ function bb_upsert_user($user_id, $name) {
     $ins->execute([$user_id, $name]);
   }
 }
+
+// Fetch all recipes for a specific user
+function bb_get_recipes_by_user(int $user_id, string $q = ''): array {
+  global $db;
+
+  $base = "
+    SELECT
+      R.recipe_id,
+      R.user_id,
+      R.title_recipe_info       AS title,
+      R.description_recipe_info AS description,
+      R.servings,
+      COALESCE(R.created_at, NOW()) AS created_at,
+      U.name                    AS author,
+      AVG(T.stars)              AS avg_rating,
+      COUNT(T.user_id)          AS rating_count
+    FROM Recipes R
+    JOIN Users U          ON U.user_id = R.user_id
+    LEFT JOIN rates T     ON T.recipe_id = R.recipe_id
+    LEFT JOIN Ingredients I ON I.recipe_id = R.recipe_id
+    WHERE R.user_id = ?
+  ";
+
+  $params = [$user_id];
+  if ($q !== '') {
+    $tokens = preg_split('/\s+/', $q, -1, PREG_SPLIT_NO_EMPTY);
+    foreach ($tokens as $t) {
+      $base .= " AND (R.title_recipe_info LIKE ? OR R.description_recipe_info LIKE ? OR I.name LIKE ?)";
+      $like = '%' . $t . '%';
+      array_push($params, $like, $like, $like);
+    }
+  }
+
+  $sql = $base . "
+    GROUP BY R.recipe_id
+    ORDER BY COALESCE(AVG(T.stars),0) DESC, R.recipe_id DESC
+    LIMIT 500
+  ";
+
+  $stmt = $db->prepare($sql);
+  $stmt->execute($params);
+  return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Update recipe + ingredients + steps
+function bb_update_recipe($recipe_id, $user_id, $title, $desc, $difficulty, $prep, $cook, $servings, $ingredients = [], $steps = []) {
+  global $db;
+
+  try {
+    $db->beginTransaction();
+
+    // Update main recipe info
+    $sql = "UPDATE Recipes
+            SET title_recipe_info = ?, description_recipe_info = ?, difficulty_recipe_info = ?,
+                prep_time = ?, cook_time = ?, servings = ?
+            WHERE recipe_id = ? AND user_id = ?";
+    $db->prepare($sql)->execute([
+      $title,
+      $desc,
+      $difficulty ?: null,
+      $prep !== '' ? $prep : null,
+      $cook !== '' ? $cook : null,
+      $servings,
+      $recipe_id,
+      $user_id
+    ]);
+
+    // Delete old ingredients
+    $db->prepare("DELETE FROM Ingredients WHERE recipe_id=?")->execute([$recipe_id]);
+
+    // Insert new ingredients
+    if (!empty($ingredients)) {
+      $ins = $db->prepare("INSERT INTO Ingredients (recipe_id, ingredient_id, name, number_quantity, unit_quantity)
+                           VALUES (?, ?, ?, ?, ?)");
+      $i = 1;
+      foreach ($ingredients as $ing) {
+        $name = trim((string)$ing['name']);
+        if ($name === '') continue;
+        $qty  = isset($ing['qty']) ? (float)$ing['qty'] : null;
+        $unit = isset($ing['unit']) ? trim((string)$ing['unit']) : null;
+        $ins->execute([$recipe_id, $i++, $name, $qty, $unit ?: null]);
+      }
+    }
+
+    // Delete old steps
+    $db->prepare("DELETE FROM Steps WHERE recipe_id=?")->execute([$recipe_id]);
+
+    // Insert new steps
+    if (!empty($steps)) {
+      $insStep = $db->prepare("INSERT INTO Steps (recipe_id, step_no, instruction)
+                               VALUES (?, ?, ?)");
+      $s = 1;
+      foreach ($steps as $txt) {
+        $txt = trim((string)$txt);
+        if ($txt === '') continue;
+        $insStep->execute([$recipe_id, $s++, $txt]);
+      }
+    }
+
+    $db->commit();
+
+  } catch (Throwable $e) {
+    if ($db->inTransaction()) $db->rollBack();
+    throw $e;
+  }
+}
+
+function bb_delete_recipe($recipe_id, $user_id) {
+  global $db;
+
+  try {
+    $db->beginTransaction();
+
+    // Ensure user owns the recipe
+    $check = $db->prepare("SELECT 1 FROM Recipes WHERE recipe_id=? AND user_id=?");
+    $check->execute([$recipe_id, $user_id]);
+    if (!$check->fetch()) {
+      throw new Exception("Unauthorized delete");
+    }
+
+    // Delete child tables
+    $db->prepare("DELETE FROM Ingredients WHERE recipe_id=?")->execute([$recipe_id]);
+    $db->prepare("DELETE FROM Steps WHERE recipe_id=?")->execute([$recipe_id]);
+    $db->prepare("DELETE FROM comments WHERE recipe_id=?")->execute([$recipe_id]);
+    $db->prepare("DELETE FROM rates WHERE recipe_id=?")->execute([$recipe_id]);
+
+    // Delete the recipe itself
+    $db->prepare("DELETE FROM Recipes WHERE recipe_id=? AND user_id=?")
+       ->execute([$recipe_id, $user_id]);
+
+    $db->commit();
+
+  } catch (Throwable $e) {
+    if ($db->inTransaction()) $db->rollBack();
+    throw $e;
+  }
+}
+
+
+
