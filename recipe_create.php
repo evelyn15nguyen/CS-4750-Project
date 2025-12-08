@@ -376,10 +376,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
         </div>
 
-        <div class="form-group">
+        <!-- <div class="form-group">
           <label>User ID * </label>
           <input type="number" name="user_id" min="1" required value="<?php echo e($_POST['user_id'] ?? ''); ?>" placeholder="1">
-        </div>
+        </div> -->
 
         <div class="section-header">
           <span>🥕</span>
