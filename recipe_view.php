@@ -1,4 +1,9 @@
 <?php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+  header("Location: login.php");
+  exit;
+}
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/bitebook-db.php';
 
@@ -453,10 +458,7 @@ $rating      = bb_rating_summary($id);
 
       <div class="form-card">
         <form method="post">
-          <div class="form-group">
-            <label>User ID</label>
-            <input type="number" name="r_user" min="1" required placeholder="Enter your user ID">
-          </div>
+          <input type="hidden" name="r_user" value="<?php echo (int)$_SESSION['user_id']; ?>">
           <div class="form-group">
             <label>Your Rating</label>
             <div class="star-rating">
@@ -472,9 +474,13 @@ $rating      = bb_rating_summary($id);
               <label for="star1">★</label>
             </div>
           </div>
-          <button type="submit" name="add_rating" value="1" class="btn btn-primary">Submit Rating</button>
+
+          <button type="submit" name="add_rating" value="1" class="btn btn-primary">
+            Submit Rating
+          </button>
         </form>
       </div>
+
     </div>
 
     <div class="section">
@@ -482,17 +488,17 @@ $rating      = bb_rating_summary($id);
       
       <div class="form-card" style="margin-bottom: 2rem;">
         <form method="post">
-          <div class="form-group">
-            <label>User ID</label>
-            <input type="number" name="c_user" min="1" required placeholder="Enter your user ID">
-          </div>
-          <div class="form-group">
+        <input type="hidden" name="c_user" value="<?php echo (int)$_SESSION['user_id']; ?>">
+        <div class="form-group">
             <label>Your Comment</label>
             <textarea name="c_body" rows="4" required placeholder="Share your thoughts about this recipe..."></textarea>
           </div>
-          <button type="submit" name="add_comment" value="1" class="btn btn-primary">Post Comment</button>
+          <button type="submit" name="add_comment" value="1" class="btn btn-primary">
+            Post Comment
+          </button>
         </form>
       </div>
+
 
       <?php if (empty($comments)): ?>
         <p class="empty-message">No comments yet. Be the first to share your thoughts!</p>

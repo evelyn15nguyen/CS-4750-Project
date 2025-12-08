@@ -1,4 +1,9 @@
 <?php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/bitebook-db.php';
 
@@ -18,7 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $prep_time   = param_int_or_null('prep_time');
   $cook_time   = param_int_or_null('cook_time');
   $servings    = param_int_or_null('servings');
-  $user_id     = param_int_or_null('user_id');
+  $user_id = (int)$_SESSION['user_id'];
+
 
   if ($title === '')        $errors[] = 'Title is required.';
   if ($user_id === null)    $errors[] = 'User ID is required.';

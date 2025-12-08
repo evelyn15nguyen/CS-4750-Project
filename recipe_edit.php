@@ -11,6 +11,17 @@ if (!isset($_SESSION['user_id'])) {
 
 if (!function_exists('e')) { function e($s){ return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); } }
 
+
+// Only the logged-in user can view their own profile
+if (!isset($_SESSION['user_id'])) {
+  header('Location: login.php');
+  exit;
+}
+
+$user_id   = (int)$_SESSION['user_id'];
+$username  = $_SESSION['username'] ?? 'Me';
+$logged_in = true;
+
 $recipe_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $user_id   = (int)$_SESSION['user_id'];
 
